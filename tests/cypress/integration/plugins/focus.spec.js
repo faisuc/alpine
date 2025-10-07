@@ -44,6 +44,7 @@ test('works with clone',
             }
         }">
             <button id="one" @click="open = true">Trap</button>
+
             <div x-trap="open">
                 <input type="text">
                 <button id="two" @click="triggerClone()">Test</button>
@@ -94,6 +95,41 @@ test('can trap focus with inert',
         get('#open').should(haveAttribute('aria-hidden', 'true'))
         get('#close').click()
         get('#open').should(notHaveAttribute('aria-hidden', 'true'))
+    },
+)
+
+test('inert only applies aria-hidden once',
+    [html`
+        <div>
+            <div id="sibling">I should have aria-hidden applied once</div>
+            <div x-data="{
+                open: false,
+                timesApplied: 0,
+                init() {
+                    let observer = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+                                this.timesApplied++
+                            }
+                        })
+                    })
+
+                    observer.observe(document.querySelector('#sibling'), {
+                        attributes: true
+                    })
+                },
+            }">
+                <input type="text" id="timesApplied" x-model="timesApplied" />
+                <button id="trigger" @click="open = true">open</button>
+                <div x-trap.inert="open">
+                    Hello, I'm a friendly modal!
+                </div>
+            </div>
+        </div>
+    `],
+    ({ get }, reload) => {
+        get('#trigger').click()
+        get('#timesApplied').should('have.value', '1')
     },
 )
 
@@ -331,5 +367,33 @@ test('focuses element with autofocus',
         get('#5').should(haveFocus())
         cy.focused().tab()
         get('#3').should(haveFocus())
+    }
+)
+
+test('can disable x-trap autofocus with .noautofocus modifier',
+    [html`
+        <div x-data="{ open: false }">
+            <input type="text" id="1">
+            <button id="2" @click="open = true">open</button>
+            <div>
+                <div x-trap.noautofocus="open">
+                    <input type="text" id="3">
+                    <input autofocus type="text" id="4">
+                    <button @click="open = false" id="5">close</button>
+                </div>
+            </div>
+        </div>
+    `],
+    ({ get }) => {
+        get('#1').click()
+        get('#1').should(haveFocus())
+        get('#2').click()
+        get('#4').should(notHaveFocus())
+        cy.focused().tab()
+        get('#3').should(haveFocus())
+        cy.focused().tab({shift: true})
+        get('#5').should(haveFocus())
+        cy.focused().click()
+        get('#2').should(haveFocus())
     }
 )

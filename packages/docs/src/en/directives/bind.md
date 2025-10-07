@@ -11,7 +11,7 @@ For example, here's a component where we will use `x-bind` to set the placeholde
 
 ```alpine
 <div x-data="{ placeholder: 'Type here...' }">
-  <input type="text" x-bind:placeholder="placeholder">
+    <input type="text" x-bind:placeholder="placeholder">
 </div>
 ```
 
@@ -24,6 +24,8 @@ If `x-bind:` is too verbose for your liking, you can use the shorthand: `:`. For
 <input type="text" :placeholder="placeholder">
 ```
 
+> Despite not being included in the above snippet, `x-bind` cannot be used if no parent element has `x-data` defined. [→ Read more about `x-data`](/directives/data)
+
 <a name="binding-classes"></a>
 ## Binding classes
 
@@ -33,11 +35,11 @@ Here's a simple example of a simple dropdown toggle, but instead of using `x-sho
 
 ```alpine
 <div x-data="{ open: false }">
-  <button x-on:click="open = ! open">Toggle Dropdown</button>
+    <button x-on:click="open = ! open">Toggle Dropdown</button>
 
-  <div :class="open ? '' : 'hidden'">
-    Dropdown Contents...
-  </div>
+    <div :class="open ? '' : 'hidden'">
+        Dropdown Contents...
+    </div>
 </div>
 ```
 
@@ -162,7 +164,7 @@ And like most expressions in Alpine, you can always use the result of a JavaScri
 The object keys can be anything you would normally write as an attribute name in Alpine. This includes Alpine directives and modifiers, but also plain HTML attributes. The object values are either plain strings, or in the case of dynamic Alpine directives, callbacks to be evaluated by Alpine.
 
 ```alpine
-<div x-data="dropdown()">
+<div x-data="dropdown">
     <button x-bind="trigger">Open Dropdown</button>
 
     <span x-bind="dialogue">Dropdown Contents</span>

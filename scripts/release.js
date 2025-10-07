@@ -39,8 +39,17 @@ function writeNewAlpineVersion() {
     writeToPackageDotJson('alpinejs', 'version', version)
     console.log('Bumping alpinejs package.json: '+version)
 
+    writeToPackageDotJson('ui', 'version', version)
+    console.log('Bumping @alpinejs/ui package.json: '+version)
+
+    writeToPackageDotJson('csp', 'version', version)
+    console.log('Bumping @alpinejs/csp package.json: '+version)
+
     writeToPackageDotJson('intersect', 'version', version)
     console.log('Bumping @alpinejs/intersect package.json: '+version)
+
+    writeToPackageDotJson('resize', 'version', version)
+    console.log('Bumping @alpinejs/resize package.json: '+version)
 
     writeToPackageDotJson('persist', 'version', version)
     console.log('Bumping @alpinejs/persist package.json: '+version)
@@ -51,11 +60,17 @@ function writeNewAlpineVersion() {
     writeToPackageDotJson('collapse', 'version', version)
     console.log('Bumping @alpinejs/collapse package.json: '+version)
 
+    writeToPackageDotJson('anchor', 'version', version)
+    console.log('Bumping @alpinejs/anchor package.json: '+version)
+
     writeToPackageDotJson('morph', 'version', version)
     console.log('Bumping @alpinejs/morph package.json: '+version)
 
     writeToPackageDotJson('mask', 'version', version)
     console.log('Bumping @alpinejs/mask package.json: '+version)
+
+    writeToPackageDotJson('sort', 'version', version)
+    console.log('Bumping @alpinejs/sort package.json: '+version)
 }
 
 function writeNewDocsVersion() {
@@ -74,11 +89,20 @@ function publish() {
     console.log('Publishing alpinejs on NPM...');
     runFromPackage('alpinejs', 'npm publish')
 
+    console.log('Publishing @alpinejs/ui on NPM...');
+    runFromPackage('ui', 'npm publish --access public')
+
+    console.log('Publishing @alpinejs/csp on NPM...');
+    runFromPackage('csp', 'npm publish --access public')
+
     console.log('Publishing @alpinejs/docs on NPM...');
     runFromPackage('docs', 'npm publish --access public')
 
     console.log('Publishing @alpinejs/intersect on NPM...');
     runFromPackage('intersect', 'npm publish --access public')
+
+    console.log('Publishing @alpinejs/resize on NPM...');
+    runFromPackage('resize', 'npm publish --access public')
 
     console.log('Publishing @alpinejs/persist on NPM...');
     runFromPackage('persist', 'npm publish --access public')
@@ -89,11 +113,17 @@ function publish() {
     console.log('Publishing @alpinejs/collapse on NPM...');
     runFromPackage('collapse', 'npm publish --access public')
 
+    console.log('Publishing @alpinejs/anchor on NPM...');
+    runFromPackage('anchor', 'npm publish --access public')
+
     console.log('Publishing @alpinejs/morph on NPM...');
     runFromPackage('morph', 'npm publish --access public')
 
     console.log('Publishing @alpinejs/mask on NPM...');
     runFromPackage('mask', 'npm publish --access public')
+
+    console.log('Publishing @alpinejs/sort on NPM...');
+    runFromPackage('sort', 'npm publish --access public')
 
     log('\n\nFinished!')
 }

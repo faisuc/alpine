@@ -1,4 +1,4 @@
-import { beChecked, notBeChecked, haveAttribute, haveData, haveText, test, beVisible, notBeVisible, html } from '../../utils'
+import { beChecked, contain, notBeChecked, haveAttribute, haveData, haveText, test, beVisible, notBeVisible, html } from '../../utils'
 
 test('data modified in event listener updates affected attribute bindings',
     html`
@@ -97,10 +97,30 @@ test('.stop modifier',
     }
 )
 
-test('.capture modifier',
+
+test('.stop modifier with a .throttle',
     html`
         <div x-data="{ foo: 'bar' }">
-            <button @click.capture="foo = 'baz'">
+            <button x-on:click="foo = 'baz'">
+                <h1>h1</h1>
+                <h2 @click.stop.throttle>h2</h2>
+            </button>
+        </div>
+    `,
+    ({ get }) => {
+        get('div').should(haveData('foo', 'bar'))
+        get('h2').click()
+        get('h2').click()
+        get('div').should(haveData('foo', 'bar'))
+        get('h1').click()
+        get('div').should(haveData('foo', 'baz'))
+    }
+)
+
+test('.capture modifier',
+    html`
+        <div x-data="{ foo: 'bar', count: 0 }">
+            <button @click.capture="count = count + 1; foo = 'baz'">
                 <h1>h1</h1>
                 <h2 @click="foo = 'bob'">h2</h2>
             </button>
@@ -110,6 +130,39 @@ test('.capture modifier',
         get('div').should(haveData('foo', 'bar'))
         get('h2').click()
         get('div').should(haveData('foo', 'bob'))
+        get('div').should(haveData('count', 1))
+    }
+)
+
+test('.capture modifier with @keyup',
+    html`
+        <div x-data="{ foo: 'bar', count: 0 }">
+            <span @keyup.capture="count = count + 1; foo = 'span'">
+                <input type="text" @keyup="foo = 'input'">
+            </span>
+        </div>
+    `,
+    ({ get }) => {
+        get('div').should(haveData('foo', 'bar'))
+        get('input').type('f')
+        get('div').should(haveData('foo', 'input'))
+        get('div').should(haveData('count', 1))
+    }
+)
+
+test('.capture modifier with @keyup and specified key',
+    html`
+        <div x-data="{ foo: 'bar', count: 0 }">
+            <span @keyup.enter.capture="count = count + 1; foo = 'span'">
+                <input type="text" @keyup.enter="foo = 'input'">
+            </span>
+        </div>
+    `,
+    ({ get }) => {
+        get('div').should(haveData('foo', 'bar'))
+        get('input').type('{enter}')
+        get('div').should(haveData('foo', 'input'))
+        get('div').should(haveData('count', 1))
     }
 )
 
@@ -133,6 +186,27 @@ test('.self modifier',
     }
 )
 
+test(
+    ".self.once modifiers",
+    html`
+        <div x-data="{ foo: 'bar' }">
+            <h1 x-on:click.self.once="foo = 'baz'" id="selfTarget">
+                content
+                <button>click</button>
+                content
+            </h1>
+            <span x-text="foo"></span>
+        </div>
+    `,
+    ({ get }) => {
+        get("span").should(haveText("bar"));
+        get("button").click();
+        get("span").should(haveText("bar"));
+        get("h1").click();
+        get("span").should(haveText("baz"));
+    }
+);
+
 test('.prevent modifier',
     html`
         <div x-data="{}">
@@ -140,6 +214,19 @@ test('.prevent modifier',
         </div>
     `,
     ({ get }) => {
+        get('input').check()
+        get('input').should(notBeChecked())
+    }
+)
+
+test('.prevent modifier with a .debounce',
+    html`
+        <div x-data="{}">
+            <input type="checkbox" x-on:click.prevent.debounce>
+        </div>
+    `,
+    ({ get }) => {
+        get('input').check()
         get('input').check()
         get('input').should(notBeChecked())
     }
@@ -275,6 +362,22 @@ test('.debounce modifier',
     }
 )
 
+test('.throttle modifier',
+    html`
+        <div x-data="{ count: 0 }">
+            <input x-on:keyup.throttle.504ms="count = count+1">
+            <span x-text="count"></span>
+        </div>
+    `,
+    ({ get }) => {
+        get('span').should(haveText('0'))
+        get('input').type('f')
+        get('span').should(haveText('1'))
+        get('input').type('ffffffffffff')
+        get('span').should(haveText('1'))
+    }
+)
+
 test('keydown modifiers',
     html`
         <div x-data="{ count: 0 }">
@@ -294,6 +397,7 @@ test('keydown modifiers',
                 x-on:keydown.slash="count++"
                 x-on:keydown.period="count++"
                 x-on:keydown.equal="count++"
+                x-on:keydown.comma="count++"
             >
 
             <span x-text="count"></span>
@@ -327,8 +431,35 @@ test('keydown modifiers',
         get('span').should(haveText('25'))
         get('input').type('.')
         get('span').should(haveText('27'))
+        get('input').type(',')
+        get('span').should(haveText('29'))
     }
 )
+
+test('discerns between space minus underscore',
+    html`
+        <div x-data="{ count: 0 }">
+            <input id="space" type="text" x-on:keydown.space="count++" />
+            <input id="minus" type="text" x-on:keydown.-="count++" />
+            <input id="underscore" type="text" x-on:keydown._="count++" />
+            <span x-text="count"></span>
+        </div>
+    `,
+    ({get}) => {
+        get('span').should(haveText('0'))
+        get('#space').type(' ')
+        get('span').should(haveText('1'))
+        get('#space').type('-')
+        get('span').should(haveText('1'))
+        get('#minus').type('-')
+        get('span').should(haveText('2'))
+        get('#minus').type(' ')
+        get('span').should(haveText('2'))
+        get('#underscore').type('_')
+        get('span').should(haveText('3'))
+        get('#underscore').type(' ')
+        get('span').should(haveText('3'))
+    })
 
 test('keydown combo modifiers',
     html`
@@ -370,6 +501,25 @@ test('@click.away',
     html`
         <div x-data="{ foo: 'bar' }">
             <h1 @click.away="foo = 'baz'">h1</h1>
+
+            <h2>h2</h2>
+
+            <span x-text="foo"></span>
+        </div>
+    `,
+    ({ get }) => {
+        get('span').should(haveText('bar'))
+        get('h1').click()
+        get('span').should(haveText('bar'))
+        get('h2').click()
+        get('span').should(haveText('baz'))
+    }
+)
+
+test('@click.away.once works after clicking inside',
+    html`
+        <div x-data="{ foo: 'bar' }">
+            <h1 @click.away.once="foo = 'baz'">h1</h1>
 
             <h2>h2</h2>
 
@@ -478,6 +628,20 @@ test('.dot modifier correctly binds event listener',
         get('span').should(haveText('baz'))
     }
 )
+test('underscores are allowed in event names',
+    html`
+        <div x-data="{ foo: 'bar' }" x-on:event_name="foo = 'baz'">
+            <button x-on:click="$dispatch('event_name')"></button>
+
+            <span x-text="foo"></span>
+        </div>
+    `,
+    ({ get }) => {
+        get('span').should(haveText('bar'))
+        get('button').click()
+        get('span').should(haveText('baz'))
+    }
+)
 
 test('.dot modifier correctly binds event listener with namespace',
     html`
@@ -493,3 +657,173 @@ test('.dot modifier correctly binds event listener with namespace',
         get('span').should(haveText('baz'))
     }
 )
+
+test('handles await in handlers with invalid right hand expressions',
+    html`
+        <div x-data="{ text: 'original' }">
+            <button @click="let value = 'new string'; text = await Promise.resolve(value)"></button>
+            <span x-text="text"></span>
+        </div>
+    `,
+    ({ get }) => {
+        get('span').should(haveText('original'))
+        get('button').click()
+        get('span').should(haveText('new string'))
+    }
+)
+
+test(
+    "handles system modifier keys on key events",
+    html`
+        <div x-data="{ keys: {
+            shift: false,
+            ctrl: false,
+            meta: false,
+            alt: false,
+            cmd: false
+        } }">
+            <input type="text"
+                @keydown.capture="Object.keys(keys).forEach(key => keys[key] = false)"
+                @keydown.meta.space="keys.meta = true"
+                @keydown.ctrl.space="keys.ctrl = true"
+                @keydown.shift.space="keys.shift = true"
+                @keydown.alt.space="keys.alt = true"
+                @keydown.cmd.space="keys.cmd = true"
+            />
+            <template x-for="key in Object.keys(keys)" :key="key">
+                <input type="checkbox" :name="key" x-model="keys[key]">
+            </template>
+        </div>
+    `,({ get }) => {
+        get("input[name=shift]").as('shift').should(notBeChecked());
+        get("input[name=ctrl]").as('ctrl').should(notBeChecked());
+        get("input[name=meta]").as('meta').should(notBeChecked());
+        get("input[name=alt]").as('alt').should(notBeChecked());
+        get("input[name=cmd]").as('cmd').should(notBeChecked());
+        get("input[type=text]").as('input').trigger("keydown", { key: 'space', shiftKey: true });
+        get('@shift').should(beChecked());
+        get("@input").trigger("keydown", { key: 'space', ctrlKey: true });
+        get("@shift").should(notBeChecked());
+        get("@ctrl").should(beChecked());
+        get("@input").trigger("keydown", { key: 'space', metaKey: true });
+        get("@ctrl").should(notBeChecked());
+        get("@meta").should(beChecked());
+        get("@cmd").should(beChecked());
+        get("@input").trigger("keydown", { key: 'space', altKey: true });
+        get("@meta").should(notBeChecked());
+        get("@cmd").should(notBeChecked());
+        get("@alt").should(beChecked());
+        get("@input").trigger("keydown", { key: 'space' });
+        get("@alt").should(notBeChecked());
+        get("@input").trigger("keydown", { key: 'space',
+        ctrlKey: true, shiftKey: true, metaKey: true, altKey: true });
+        get("input[name=shift]").as("shift").should(beChecked());
+        get("input[name=ctrl]").as("ctrl").should(beChecked());
+        get("input[name=meta]").as("meta").should(beChecked());
+        get("input[name=alt]").as("alt").should(beChecked());
+        get("input[name=cmd]").as("cmd").should(beChecked());
+    }
+);
+
+test(
+    "handles system modifier keys on mouse events",
+    html`
+        <div x-data="{ keys: {
+            shift: false,
+            ctrl: false,
+            meta: false,
+            alt: false,
+            cmd: false
+        } }">
+            <button type=button
+                @click.capture="Object.keys(keys).forEach(key => keys[key] = false)"
+                @click.shift="keys.shift = true"
+                @click.ctrl="keys.ctrl = true"
+                @click.meta="keys.meta = true"
+                @click.alt="keys.alt = true"
+                @click.cmd="keys.cmd = true">
+                    change
+            </button>
+            <template x-for="key in Object.keys(keys)" :key="key">
+                <input type="checkbox" :name="key" x-model="keys[key]">
+            </template>
+        </div>
+    `,({ get }) => {
+        get("input[name=shift]").as('shift').should(notBeChecked());
+        get("input[name=ctrl]").as('ctrl').should(notBeChecked());
+        get("input[name=meta]").as('meta').should(notBeChecked());
+        get("input[name=alt]").as('alt').should(notBeChecked());
+        get("input[name=cmd]").as('cmd').should(notBeChecked());
+        get("button").as('button').trigger("click", { shiftKey: true });
+        get('@shift').should(beChecked());
+        get("@button").trigger("click", { ctrlKey: true });
+        get("@shift").should(notBeChecked());
+        get("@ctrl").should(beChecked());
+        get("@button").trigger("click", { metaKey: true });
+        get("@ctrl").should(notBeChecked());
+        get("@meta").should(beChecked());
+        get("@cmd").should(beChecked());
+        get("@button").trigger("click", { altKey: true });
+        get("@meta").should(notBeChecked());
+        get("@cmd").should(notBeChecked());
+        get("@alt").should(beChecked());
+        get("@button").trigger("click", {});
+        get("@alt").should(notBeChecked());
+        get("@button").trigger("click", { ctrlKey: true, shiftKey: true, metaKey: true, altKey: true });
+        get("@shift").as("shift").should(beChecked());
+        get("@ctrl").as("ctrl").should(beChecked());
+        get("@meta").as("meta").should(beChecked());
+        get("@alt").as("alt").should(beChecked());
+        get("@cmd").as("cmd").should(beChecked());
+    }
+);
+
+test(
+    "handles all mouse events with modifiers",
+    html`
+        <div x-data="{ keys: {
+            shift: false,
+            ctrl: false,
+            meta: false,
+            alt: false,
+            cmd: false
+        } }">
+            <button type=button
+                @click.capture="Object.keys(keys).forEach(key => keys[key] = false)"
+                @contextmenu.prevent.shift="keys.shift = true"
+                @auxclick.ctrl="keys.ctrl = true"
+                @dblclick.meta="keys.meta = true"
+                @mouseenter.alt="keys.alt = true"
+                @mousemove.cmd="keys.cmd = true">
+                    change
+            </button>
+            <template x-for="key in Object.keys(keys)" :key="key">
+                <input type="checkbox" :name="key" x-model="keys[key]">
+            </template>
+        </div>
+    `,({ get }) => {
+        get("input[name=shift]").as('shift').should(notBeChecked());
+        get("input[name=ctrl]").as('ctrl').should(notBeChecked());
+        get("input[name=meta]").as('meta').should(notBeChecked());
+        get("input[name=alt]").as('alt').should(notBeChecked());
+        get("input[name=cmd]").as('cmd').should(notBeChecked());
+        get("button").as('button').trigger("contextmenu", { shiftKey: true });
+        get('@shift').should(beChecked());
+        get("@button").trigger("click");
+        get("@button").trigger("auxclick", { ctrlKey: true });
+        get("@shift").should(notBeChecked());
+        get("@ctrl").should(beChecked());
+        get("@button").trigger("click");
+        get("@button").trigger("dblclick", { metaKey: true });
+        get("@ctrl").should(notBeChecked());
+        get("@meta").should(beChecked());
+        get("@button").trigger("click");
+        get("@button").trigger("mouseenter", { altKey: true });
+        get("@meta").should(notBeChecked());
+        get("@alt").should(beChecked());
+        get("@button").trigger("click");
+        get("@button").trigger("mousemove", { metaKey: true });
+        get("@alt").should(notBeChecked());
+        get("@cmd").should(beChecked());
+    }
+);

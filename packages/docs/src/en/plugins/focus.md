@@ -1,5 +1,5 @@
 ---
-order: 3
+order: 5
 title: Focus
 description: Easily manage focus within the page
 graph_image: https://alpinejs.dev/social_focus.jpg
@@ -24,10 +24,10 @@ You can include the CDN build of this plugin as a `<script>` tag, just make sure
 
 ```alpine
 <!-- Alpine Plugins -->
-<script defer src="https://unpkg.com/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
 
 <!-- Alpine Core -->
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 ```
 
 ### Via NPM
@@ -228,7 +228,7 @@ For example:
 
 ```alpine
 <div x-data="{ open: false }">
-    <button>Open Dialog</button>
+    <button @click="open = true">Open Dialog</button>
 
     <div x-show="open" x-trap.noscroll="open">
         Dialog Contents
@@ -301,6 +301,13 @@ For example:
 </div>
 <!-- END_VERBATIM -->
 
+<a name="noautofocus"></a>
+#### .noautofocus
+
+By default, when `x-trap` traps focus within an element, it focuses the first focussable element within that element. This is a sensible default, however there are times where you may want to disable this behavior and not automatically focus any elements when `x-trap` engages.
+
+By adding `.noautofocus`, Alpine will not automatically focus any elements when trapping focus.
+
 <a name="focus-magic"></a>
 ## $focus
 
@@ -309,7 +316,7 @@ This plugin offers many smaller utilities for managing focus within a page. Thes
 | Property | Description |
 | ---       | --- |
 | `focus(el)`   | Focus the passed element (handling annoyances internally: using nextTick, etc.) |
-| `focusable(el)`   | Detect weather or not an element is focusable |
+| `focusable(el)`   | Detect whether or not an element is focusable |
 | `focusables()`   | Get all "focusable" elements within the current element |
 | `focused()`   | Get the currently focused element on the page |
 | `lastFocused()`   | Get the last focused element on the page |

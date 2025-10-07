@@ -1,72 +1,184 @@
 ---
-order: 5
+order: 1
 title: CSP
 ---
 
-# CSP (Content-Security Policy)
+# CSP (Content-Security Policy) Build
 
-In order for Alpine to be able to execute plain strings from HTML attributes as JavaScript expressions, for example `x-on:click="console.log()"`, it needs to rely on utilities that violate the "unsafe-eval" content security policy.
+In order for Alpine to execute JavaScript expressions from HTML attributes like `x-on:click="console.log()"`, it needs to use utilities that violate the "unsafe-eval" [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) that some applications enforce for security purposes.
 
 > Under the hood, Alpine doesn't actually use eval() itself because it's slow and problematic. Instead it uses Function declarations, which are much better, but still violate "unsafe-eval".
 
-In order to accommodate environments where this CSP is necessary, Alpine offers an alternate build that doesn't violate "unsafe-eval", but has a more restrictive syntax.
+Alpine offers an alternate build that doesn't violate "unsafe-eval" and supports most of Alpine's inline expression syntax.
 
 <a name="installation"></a>
 ## Installation
 
-Like all Alpine extensions, you can include this either via `<script>` tag or module import:
+You can use this build by either including it from a `<script>` tag or installing it via NPM:
 
-<a name="script-tag"></a>
-### Script tag
+### Via CDN
+
+You can include this build's CDN as a `<script>` tag just like you would normally with standard Alpine build:
 
 ```alpine
-<html>
-    <script src="alpinejs/alpinejs-csp/cdn.js" defer></script>
-</html>
+<!-- Alpine's CSP-friendly Core -->
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.x.x/dist/cdn.min.js"></script>
 ```
 
-<a name="module-import"></a>
-### Module import
+### Via NPM
+
+You can alternatively install this build from NPM for use inside your bundle like so:
+
+```shell
+npm install @alpinejs/csp
+```
+
+Then initialize it from your bundle:
 
 ```js
 import Alpine from '@alpinejs/csp'
 
 window.Alpine = Alpine
-window.Alpine.start()
+
+Alpine.start()
 ```
 
-<a name="restrictions"></a>
-## Restrictions
+<a name="basic-example"></a>
+## Basic Example
 
-Since Alpine can no longer interpret strings as plain JavaScript, it has to parse and construct JavaScript functions from them manually.
-
-Due to this limitation, you must use `Alpine.data` to register your `x-data` objects, and must reference properties and methods from it by key only.
-
-For example, an inline component like this will not work.
+Here's a working counter component using Alpine's CSP build. Notice how most expressions work exactly like regular Alpine:
 
 ```alpine
-<!-- Bad -->
-<div x-data="{ count: 1 }">
-    <button @click="count++">Increment</button>
+<html>
+    <head>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'nonce-a23gbfz9e'">
+        <script defer nonce="a23gbfz9e" src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        <div x-data="{ count: 0, message: 'Hello' }">
+            <button x-on:click="count++">Increment</button>
+            <button x-on:click="count = 0">Reset</button>
 
-    <span x-text="count"></span>
+            <span x-text="count"></span>
+            <span x-text="message + ' World'"></span>
+            <span x-show="count > 5">Count is greater than 5!</span>
+        </div>
+    </body>
+</html>
+```
+
+<a name="whats-supported"></a>
+## What's Supported
+
+The CSP build supports most JavaScript expressions you'd want to use in Alpine:
+
+### Object and Array Literals
+```alpine
+<!-- ✅ These work -->
+<div x-data="{ user: { name: 'John', age: 30 }, items: [1, 2, 3] }">
+    <span x-text="user.name"></span>
+    <span x-text="items[0]"></span>
 </div>
 ```
 
-However, breaking out the expressions into external APIs, the following is valid with the CSP build:
-
+### Basic Operations
 ```alpine
-<!-- Good -->
-<div x-data="counter">
-    <button @click="increment">Increment</button>
-
-    <span x-text="count"></span>
+<!-- ✅ These work -->
+<div x-data="{ count: 5, name: 'Alpine' }">
+    <span x-text="count + 10"></span>
+    <span x-text="count > 3"></span>
+    <span x-text="count === 5 ? 'Yes' : 'No'"></span>
+    <span x-text="'Hello ' + name"></span>
+    <div x-show="!loading && count > 0"></div>
 </div>
 ```
-```js
-Alpine.data('counter', () => ({
-    count: 1,
 
-    increment() { this.count++ }
-}))
+### Assignments and Updates
+```alpine
+<!-- ✅ These work -->
+<div x-data="{ count: 0, user: { name: '' } }">
+    <button x-on:click="count++">Increment</button>
+    <button x-on:click="count = 0">Reset</button>
+    <input x-model="user.name">
+</div>
 ```
+
+### Method Calls
+```alpine
+<!-- ✅ These work -->
+<div x-data="{ items: ['a', 'b'], getMessage: () => 'Hello' }">
+    <span x-text="getMessage()"></span>
+    <button x-on:click="items.push('c')">Add Item</button>
+</div>
+```
+
+### Global Variables and Functions
+```alpine
+<!-- ✅ These work -->
+<div x-data="{ count: 42 }">
+    <button x-on:click="console.log('Count is:', count)">Log Count</button>
+    <span x-text="Math.max(count, 100)"></span>
+    <span x-text="parseInt('123') + count"></span>
+    <span x-text="JSON.stringify({ value: count })"></span>
+</div>
+```
+
+<a name="whats-not-supported"></a>
+## What's Not Supported
+
+Some advanced JavaScript features aren't supported:
+
+```alpine
+<!-- ❌ These don't work -->
+<div x-data>
+    <!-- Arrow functions -->
+    <button x-on:click="() => console.log('hi')">Bad</button>
+
+    <!-- Destructuring -->
+    <div x-text="{ name } = user">Bad</div>
+
+    <!-- Template literals -->
+    <div x-text="`Hello ${name}`">Bad</div>
+
+    <!-- Spread operator -->
+    <div x-data="{ ...defaults }">Bad</div>
+</div>
+```
+
+<a name="when-to-extract-logic"></a>
+## When to Extract Logic
+
+While the CSP build supports simple inline expressions, you'll want to extract complex logic into dedicated functions or Alpine.data() components for better organization:
+
+```alpine
+<!-- Instead of this -->
+<div x-data="{ users: [] }" x-show="users.filter(u => u.active && u.role === 'admin').length > 0">
+```
+
+```alpine
+<!-- Do this -->
+<div x-data="userManager" x-show="hasActiveAdmins">
+
+<script nonce="...">
+    Alpine.data('userManager', () => ({
+        users: [],
+
+        get hasActiveAdmins() {
+            return this.users.filter(u => u.active && u.role === 'admin').length > 0
+        }
+    }))
+</script>
+```
+
+This approach makes your code more readable, testable, and maintainable, especially for complex applications.
+
+<a name="csp-headers"></a>
+## CSP Headers
+
+Here's an example CSP header that works with Alpine's CSP build:
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'nonce-[random]' 'strict-dynamic';
+```
+
+The key is removing `'unsafe-eval'` from your `script-src` directive while still allowing your nonce-based scripts to run.

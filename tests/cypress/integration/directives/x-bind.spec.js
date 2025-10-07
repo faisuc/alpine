@@ -1,4 +1,4 @@
-import { beHidden, beVisible, haveText, beChecked, haveAttribute, haveClasses, haveValue, notBeChecked, notHaveAttribute, notHaveClasses, test, html } from '../../utils'
+import { beHidden, beVisible, haveText, beChecked, haveAttribute, haveClasses, haveProperty, haveValue, notBeChecked, notHaveAttribute, notHaveClasses, test, html } from '../../utils';
 
 test('sets attribute bindings on initialize',
     html`
@@ -27,13 +27,30 @@ test('style attribute bindings are added by string syntax',
     ({ get }) => get('span').should(haveClasses(['foo']))
 )
 
-test('aria-pressed/checked attribute boolean values are cast to a true/false string',
+test('aria-pressed/checked/expanded/selected attribute boolean values are cast to a true/false string',
     html`
         <div x-data="{ open: true }">
             <span x-bind:aria-pressed="open"></span>
+            <span x-bind:aria-checked="open"></span>
+            <span x-bind:aria-expanded="open"></span>
+            <span x-bind:aria-selected="open"></span>
+
+            <span x-bind:aria-pressed="false"></span>
+            <span x-bind:aria-checked="false"></span>
+            <span x-bind:aria-expanded="false"></span>
+            <span x-bind:aria-selected="false"></span>
         </div>
     `,
-    ({ get }) => get('span').should(haveAttribute('aria-pressed', 'true'))
+    ({ get }) => {
+        get('span:nth-of-type(1)').should(haveAttribute('aria-pressed', 'true'))
+        get('span:nth-of-type(2)').should(haveAttribute('aria-checked', 'true'))
+        get('span:nth-of-type(3)').should(haveAttribute('aria-expanded', 'true'))
+        get('span:nth-of-type(4)').should(haveAttribute('aria-selected', 'true'))
+        get('span:nth-of-type(5)').should(haveAttribute('aria-pressed', 'false'))
+        get('span:nth-of-type(6)').should(haveAttribute('aria-checked', 'false'))
+        get('span:nth-of-type(7)').should(haveAttribute('aria-expanded', 'false'))
+        get('span:nth-of-type(8)').should(haveAttribute('aria-selected', 'false'))
+    }
 )
 
 test('non-boolean attributes set to null/undefined/false are removed from the element',
@@ -46,6 +63,10 @@ test('non-boolean attributes set to null/undefined/false are removed from the el
             <span visible="true" x-bind:visible="null">null</span>
             <span visible="true" x-bind:visible="false">false</span>
             <span visible="true" x-bind:visible="undefined">undefined</span>
+
+            <span hidden="true" x-bind:hidden="null">null</span>
+            <span hidden="true" x-bind:hidden="false">false</span>
+            <span hidden="true" x-bind:hidden="undefined">undefined</span>
         </div>
     `,
     ({ get }) => {
@@ -55,6 +76,9 @@ test('non-boolean attributes set to null/undefined/false are removed from the el
         get('span:nth-of-type(1)').should(notHaveAttribute('visible'))
         get('span:nth-of-type(2)').should(notHaveAttribute('visible'))
         get('span:nth-of-type(3)').should(notHaveAttribute('visible'))
+        get('span:nth-of-type(4)').should(notHaveAttribute('hidden'))
+        get('span:nth-of-type(5)').should(notHaveAttribute('hidden'))
+        get('span:nth-of-type(6)').should(notHaveAttribute('hidden'))
     }
 )
 
@@ -81,10 +105,12 @@ test('boolean attribute values are set to their attribute name if true and remov
             <option x-bind:selected="isSet"></option>
             <textarea x-bind:autofocus="isSet"></textarea>
             <dl x-bind:itemscope="isSet"></dl>
-            <form x-bind:novalidate="isSet"></form>
+            <form 
+                x-bind:novalidate="isSet"
+                x-bind:inert="isSet"
+            ></form>
             <iframe
                 x-bind:allowfullscreen="isSet"
-                x-bind:allowpaymentrequest="isSet"
             ></iframe>
             <button x-bind:formnovalidate="isSet"></button>
             <audio
@@ -97,6 +123,11 @@ test('boolean attribute values are set to their attribute name if true and remov
             <track x-bind:default="isSet" />
             <img x-bind:ismap="isSet" />
             <ol x-bind:reversed="isSet"></ol>
+            <template 
+                x-bind:shadowrootclonable="isSet"
+                x-bind:shadowrootdelegatesfocus="isSet"
+                x-bind:shadowrootserializable="isSet"
+            ></template>
         </div>
     `,
     ({ get }) => {
@@ -111,7 +142,6 @@ test('boolean attribute values are set to their attribute name if true and remov
         get('dl').should(haveAttribute('itemscope', 'itemscope'))
         get('form').should(haveAttribute('novalidate', 'novalidate'))
         get('iframe').should(haveAttribute('allowfullscreen', 'allowfullscreen'))
-        get('iframe').should(haveAttribute('allowpaymentrequest', 'allowpaymentrequest'))
         get('button').should(haveAttribute('formnovalidate', 'formnovalidate'))
         get('audio').should(haveAttribute('autoplay', 'autoplay'))
         get('audio').should(haveAttribute('controls', 'controls'))
@@ -121,6 +151,9 @@ test('boolean attribute values are set to their attribute name if true and remov
         get('track').should(haveAttribute('default', 'default'))
         get('img').should(haveAttribute('ismap', 'ismap'))
         get('ol').should(haveAttribute('reversed', 'reversed'))
+        get('template').should(haveAttribute('shadowrootclonable', 'shadowrootclonable'))
+        get('template').should(haveAttribute('shadowrootdelegatesfocus', 'shadowrootdelegatesfocus'))
+        get('template').should(haveAttribute('shadowrootserializable', 'shadowrootserializable'))
 
         get('#setToFalse').click()
 
@@ -391,8 +424,8 @@ test('x-bind object syntax event handlers defined as functions receive the event
         <script>
             window.data = () => { return {
                 button: {
-                    ['@click']() {
-                        this.$refs.span.innerText = this.$el.id
+                    ['@click'](event) {
+                        this.$refs.span.innerText = event.currentTarget.id
                     }
                 }
             }}
@@ -410,7 +443,7 @@ test('x-bind object syntax event handlers defined as functions receive the event
     }
 )
 
-test('x-bind object syntax event handlers defined as functions receive the event object as their first argument',
+test('x-bind object syntax event handlers defined as functions receive element bound magics',
     html`
         <script>
             window.data = () => { return {
@@ -450,5 +483,39 @@ test('Can retrieve Alpine bound data with global bound method',
         get('#4').should(haveText('true'))
         get('#5').should(haveText(''))
         get('#6').should(haveText('bar'))
+    }
+)
+
+test('Can extract Alpine bound data as a data prop',
+    html`
+        <div x-data="{ foo: 'bar' }">
+            <div id="1" x-data="{ init() { this.$el.textContent = Alpine.extractProp(this.$el, 'foo') }}" :foo="foo"></div>
+            <div id="2" x-data="{ init() { this.$el.textContent = Alpine.extractProp(this.$el, 'foo', null, false) }}" :foo="foo"></div>
+        </div>
+    `,
+    ({ get }) => {
+        get('#1').should(haveText('bar'))
+        get('#1').should(notHaveAttribute('foo'))
+        get('#2').should(haveText('bar'))
+        get('#2').should(haveAttribute('foo', 'bar'))
+    }
+)
+
+test('x-bind updates checked attribute and property after user interaction',
+    html`
+        <div x-data="{ checked: true }">
+            <button @click="checked = !checked">toggle</button>
+            <input type="checkbox" x-bind:checked="checked" @change="checked = $event.target.checked" />
+        </div>
+    `,
+    ({ get }) => {
+        get('input').should(haveAttribute('checked', 'checked'))
+        get('input').should(haveProperty('checked', true))
+        get('input').click()
+        get('input').should(notHaveAttribute('checked'))
+        get('input').should(haveProperty('checked', false))
+        get('button').click()
+        get('input').should(haveAttribute('checked', 'checked'))
+        get('input').should(haveProperty('checked', true))
     }
 )

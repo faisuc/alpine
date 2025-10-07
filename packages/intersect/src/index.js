@@ -1,10 +1,10 @@
 export default function (Alpine) {
-    Alpine.directive('intersect', (el, { value, expression, modifiers }, { evaluateLater, cleanup }) => {
+    Alpine.directive('intersect', Alpine.skipDuringClone((el, { value, expression, modifiers }, { evaluateLater, cleanup }) => {
         let evaluate = evaluateLater(expression)
 
         let options = {
             rootMargin: getRootMargin(modifiers),
-            threshold: getThreshhold(modifiers),
+            threshold: getThreshold(modifiers),
         }
 
         let observer = new IntersectionObserver(entries => {
@@ -23,10 +23,10 @@ export default function (Alpine) {
         cleanup(() => {
             observer.disconnect()
         })
-    })
+    }))
 }
 
-function getThreshhold(modifiers) {
+function getThreshold(modifiers) {
     if (modifiers.includes('full')) return 0.99
     if (modifiers.includes('half')) return 0.5
     if (! modifiers.includes('threshold')) return 0

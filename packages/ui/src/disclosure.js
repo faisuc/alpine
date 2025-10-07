@@ -4,7 +4,7 @@ export default function (Alpine) {
         if      (! directive.value)            handleRoot(el, Alpine)
         else if (directive.value === 'panel')  handlePanel(el, Alpine)
         else if (directive.value === 'button') handleButton(el, Alpine)
-    })
+    }).before('bind')
 
     Alpine.magic('disclosure', el => {
         let $data = Alpine.$data(el)
@@ -25,12 +25,13 @@ function handleRoot(el, Alpine) {
         'x-modelable': '__isOpen',
         'x-data'() {
             return {
-                init() {
-                    queueMicrotask(() => {
-                         let defaultIsOpen = Boolean(Alpine.bound(this.$el, 'default-open', false))
+                // The panel will call this...
+                // We can't do this inside a microtask in x-init because, when default-open is set to "true",
+                // It will cause the panel to transition in for the first time, instead of showing instantly...
+                __determineDefaultOpenState() {
+                    let defaultIsOpen = Boolean(Alpine.bound(this.$el, 'default-open', false))
 
-                         if (defaultIsOpen) this.__isOpen = defaultIsOpen
-                    })
+                    if (defaultIsOpen) this.__isOpen = defaultIsOpen
                 },
                 __isOpen: false,
                 __close() {
@@ -70,6 +71,9 @@ function handleButton(el, Alpine) {
 
 function handlePanel(el, Alpine) {
     Alpine.bind(el, {
+        'x-init'() {
+            this.$data.__determineDefaultOpenState()
+        },
         'x-show'() {
             return this.$data.__isOpen
         },

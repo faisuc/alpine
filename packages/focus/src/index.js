@@ -90,7 +90,7 @@ export default function (Alpine) {
                 setTimeout(() => {
                     if (! el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0')
 
-                    el.focus({ preventScroll: this._noscroll })
+                    el.focus({ preventScroll: this.__noscroll })
                 })
             }
         }
@@ -102,14 +102,32 @@ export default function (Alpine) {
 
             let oldValue = false
 
-            let trap = createFocusTrap(el, {
+            let options = {
                 escapeDeactivates: false,
                 allowOutsideClick: true,
                 fallbackFocus: () => el,
-                initialFocus: el.querySelector('[autofocus]')
-            })
+            }
 
             let undoInert = () => {}
+
+            if (modifiers.includes('noautofocus')) {
+                options.initialFocus = false
+            } else {
+                let autofocusEl = el.querySelector('[autofocus]')
+
+                if (autofocusEl) options.initialFocus = autofocusEl
+            }
+
+            if (modifiers.includes('inert')) {
+                options.onPostActivate = () => {
+                    Alpine.nextTick(() => {
+                        undoInert = setInert(el);
+                    });
+                }
+            }
+
+            let trap = createFocusTrap(el, options)
+
             let undoDisableScrolling = () => {}
 
             const releaseFocus = () => {
@@ -129,12 +147,12 @@ export default function (Alpine) {
 
                 // Start trapping.
                 if (value && ! oldValue) {
-                    setTimeout(() => {
-                        if (modifiers.includes('inert')) undoInert = setInert(el)
-                        if (modifiers.includes('noscroll')) undoDisableScrolling = disableScrolling()
+                    if (modifiers.includes('noscroll')) undoDisableScrolling = disableScrolling()
 
+                    // Activate the trap after a generous tick. (Needed to play nice with transitions...)
+                    setTimeout(() => {
                         trap.activate()
-                    });
+                    }, 15)
                 }
 
                 // Stop trapping.
@@ -176,9 +194,11 @@ function crawlSiblingsUp(el, callback) {
     if (el.isSameNode(document.body) || ! el.parentNode) return
 
     Array.from(el.parentNode.children).forEach(sibling => {
-        if (! sibling.isSameNode(el)) callback(sibling)
-
-        crawlSiblingsUp(el.parentNode, callback)
+        if (sibling.isSameNode(el)) {
+            crawlSiblingsUp(el.parentNode, callback)
+        } else {
+            callback(sibling)
+        }
     })
 }
 

@@ -6,7 +6,7 @@ export default function (Alpine) {
         else if (directive.value === 'tab')        handleTab(el, Alpine)
         else if (directive.value === 'panels')     handlePanels(el, Alpine)
         else if (directive.value === 'panel')      handlePanel(el, Alpine)
-    })
+    }).before('bind')
 
     Alpine.magic('tab', el => {
         let $data = Alpine.$data(el)
@@ -105,6 +105,11 @@ function handleTab(el, Alpine) {
         '@keydown.up.prevent.stop'() { this.$focus.within(this.$data.__activeTabs()).withWrapAround().prev() },
         '@keydown.left.prevent.stop'() { this.$focus.within(this.$data.__activeTabs()).withWrapAround().prev() },
         ':tabindex'() { return this.$tab.isSelected ? 0 : -1 },
+        // This is important because we want to only focus the tab when it gets focus
+        // OR it finished the click event (mouseup). However, if you perform a `click`,
+        // then you will first get the `focus` and then get the `click` event.
+        // See https://github.com/tailwindlabs/headlessui/pull/1192
+        '@mousedown'(event) { event.preventDefault() },
         '@focus'() {
             if (this.$data.__manualActivation) {
                 this.$el.focus()

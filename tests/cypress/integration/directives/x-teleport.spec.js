@@ -19,6 +19,44 @@ test('can use a x-teleport',
     },
 )
 
+test('can use a x-teleport.append',
+    [html`
+        <div x-data="{ count: 1 }" id="a">
+            <button @click="count++">Inc</button>
+
+            <template x-teleport.append="#b">
+                <span x-text="count"></span>
+            </template>
+        </div>
+
+        <div id="b"></div>
+    `],
+    ({ get }) => {
+        get('#b + span').should(haveText('1'))
+        get('button').click()
+        get('#b + span').should(haveText('2'))
+    },
+)
+
+test('can use a x-teleport.prepend',
+    [html`
+        <div x-data="{ count: 1 }" id="a">
+            <button @click="count++">Inc</button>
+
+            <template x-teleport.prepend="#b">
+                <span x-text="count"></span>
+            </template>
+        </div>
+
+        <div id="b"></div>
+    `],
+    ({ get }) => {
+        get('#a + span').should(haveText('1'))
+        get('button').click()
+        get('#a + span').should(haveText('2'))
+    },
+)
+
 test('can teleport multiple',
     [html`
         <div x-data="{ count: 1 }" id="a">
@@ -84,6 +122,37 @@ test('removing teleport source removes teleported target',
     },
 )
 
+test(
+    'immediately cleans up the clone when the original template is removed',
+    [
+        html`
+            <div x-data="{ show: true, shown: 'original' }">
+                <span x-text="shown"></span>
+                <template x-if="show">
+                    <div>
+                    <template x-teleport="#target">
+                        <button x-data="{ 
+                            init() { this.shown = 'cloned' }, 
+                            destroy() { this.shown = 'destroyed' }
+                        }" @click="show = false">remove</button>
+                    </template>
+                    </div>
+                </template>
+                <section id="target"></section>
+            </div>
+        `,
+    ],
+    ({ get }) => {
+        get('section').should(haveText('remove'));
+        get("button").should(exist());
+        get('span').should(haveText('cloned'));
+        get('button').click();
+        get('section').should(haveText(''));
+        get('button').should(notExist());
+        get('span').should(haveText('destroyed'));
+    }
+);
+
 test('$refs inside teleport can be accessed outside',
     [html`
         <div x-data="{ count: 1 }" id="a">
@@ -133,5 +202,28 @@ test('$id honors x-id outside teleport',
     `],
     ({ get }) => {
         get('#b h1').should(haveText('foo-1'))
+    },
+)
+
+test('conditionally added elements get initialised inside teleport',
+    [html`
+        <div x-data="{ show: false }" id="a">
+            <button @click="show = true">Show Teleport Content</button>
+
+            <template x-teleport="#b">
+                <div>
+                    <template x-if="show" >
+                        <p x-text="'Teleport content initialised'">Teleport content waiting</p>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <div id="b"></div>
+    `],
+    ({ get }) => {
+        get('#b p').should('not.exist')
+        get('button').click()
+        get('#b p').should('exist').and('have.text', 'Teleport content initialised')
     },
 )
